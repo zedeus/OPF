@@ -84,7 +84,6 @@ if [ $# -eq 0 ] || [ "$1" != "q" ]; then
    0 0 0                                          \
    "Cam subfolder:"        1 1   "$rpicamdir"   1 32 15 0  \
    "Autostart:(yes/no)"    2 1   "$autostart"   2 32 15 0  \
-   "Server:(apache/nginx)" 3 1   "$webserver"   3 32 15 0  \
    "Webport:"              4 1   "$webport"     4 32 15 0  \
    "User:(blank=nologin)"  5 1   "$user"        5 32 15 0  \
    "Password:"             6 1   "$webpasswd"   6 32 15 0  \
@@ -129,7 +128,6 @@ fn_stop ()
 { # This is function stop
         sudo killall raspimjpeg
         sudo killall php
-        sudo killall motion
 }
 
 fn_reboot ()
@@ -185,76 +183,6 @@ sudo a2dissite 000-default.conf >/dev/null 2>&1
 sudo service apache2 restart
 }
 
-fn_nginx ()
-{
-aconf="etc/nginx/sites-available/rpicam"
-cp $aconf.1 $aconf
-if [ -e "\/$aconf" ]; then
-   sudo rm "\/$aconf"
-fi
-#uncomment next line if wishing to always access by http://ip as the root
-#sudo sed -i "s:root /var/www;:root /var/www$rpicamdirEsc;:g" $aconf 
-sudo mv /etc/nginx/sites-available/*default* etc/nginx/sites-available/ >/dev/null 2>&1
-
-if [ "$user" == "" ]; then
-   sed -i "s/auth_basic\ .*/auth_basic \"Off\";/g" $aconf
-   sed -i "s/\ auth_basic_user_file/#auth_basic_user_file/g" $aconf
-else
-   sudo htpasswd -b -c /usr/local/.htpasswd $user $webpasswd
-   sed -i "s/auth_basic\ .*/auth_basic \"Restricted\";/g" $aconf
-   sed -i "s/#auth_basic_user_file/\ auth_basic_user_file/g" $aconf
-fi
-sudo mv $aconf /$aconf
-sudo chmod 644 /$aconf
-if [ ! -e /etc/nginx/sites-enabled/rpicam ]; then
-   sudo ln -sf /$aconf /etc/nginx/sites-enabled/rpicam
-fi
-
-# Update nginx main config file
-sudo sed -i "s/worker_processes 4;/worker_processes 2;/g" /etc/nginx/nginx.conf
-sudo sed -i "s/worker_connections 768;/worker_connections 128;/g" /etc/nginx/nginx.conf
-sudo sed -i "s/gzip on;/gzip off;/g" /etc/nginx/nginx.conf
-if [ "$NGINX_DISABLE_LOGGING" != "" ]; then
-   sudo sed -i "s:access_log /var/log/nginx/nginx/access.log;:access_log /dev/null;:g" /etc/nginx/nginx.conf
-fi
-
-# Configure php-apc
-sudo sh -c "echo \"cgi.fix_pathinfo = 0;\" >> /etc/php5/fpm/php.ini"
-sudo mkdir /etc/php5/conf.d >/dev/null 2>&1
-sudo cp etc/php5/apc.ini /etc/php5/conf.d/20-apc.ini
-sudo chmod 644 /etc/php5/conf.d/20-apc.ini
-sudo service nginx restart
-}
-
-fn_motion ()
-{
-sudo sed -i "s/^; netcam_url.*/netcam_url/g" /etc/motion/motion.conf		
-sudo sed -i "s/^netcam_url.*/netcam_url http:\/\/localhost$rpicamdirEsc\/cam_pic.php/g" /etc/motion/motion.conf		
-if [ "$user" == "" ]; then
-   sudo sed -i "s/^netcam_userpass.*/; netcam_userpass value/g" /etc/motion/motion.conf		
-else
-   sudo sed -i "s/^; netcam_userpass.*/netcam_userpass/g" /etc/motion/motion.conf		
-   sudo sed -i "s/^netcam_userpass.*/netcam_userpass $user:$webpasswd/g" /etc/motion/motion.conf		
-fi
-sudo sed -i "s/^; on_event_start.*/on_event_start/g" /etc/motion/motion.conf		
-sudo sed -i "s/^on_event_start.*/on_event_start echo -n \'1\' >\/var\/www\/FIFO1/g" /etc/motion/motion.conf		
-sudo sed -i "s/^; on_event_end.*/on_event_end/g" /etc/motion/motion.conf		
-sudo sed -i "s/^on_event_end.*/on_event_end echo -n \'0\' >\/var\/www\/FIFO1/g" /etc/motion/motion.conf		
-sudo sed -i "s/control_port.*/control_port 6642/g" /etc/motion/motion.conf		
-sudo sed -i "s/control_html_output.*/control_html_output off/g" /etc/motion/motion.conf		
-sudo sed -i "s/^output_pictures.*/output_pictures off/g" /etc/motion/motion.conf		
-sudo sed -i "s/^ffmpeg_output_movies on/ffmpeg_output_movies off/g" /etc/motion/motion.conf		
-sudo sed -i "s/^ffmpeg_cap_new on/ffmpeg_cap_new off/g" /etc/motion/motion.conf		
-sudo sed -i "s/^stream_port.*/stream_port 0/g" /etc/motion/motion.conf		
-sudo sed -i "s/^webcam_port.*/webcam_port 0/g" /etc/motion/motion.conf		
-sudo sed -i "s/^process_id_file/; process_id_file/g" /etc/motion/motion.conf
-sudo sed -i "s/^videodevice/; videodevice/g" /etc/motion/motion.conf
-sudo sed -i "s/^event_gap 60/event_gap 3/g" /etc/motion/motion.conf
-sudo sed -i "s/www/www$rpicamdirEsc/" /etc/motion/motion.conf
-sudo chown motion:www-data /etc/motion/motion.conf
-sudo chmod 664 /etc/motion/motion.conf
-}
-
 fn_autostart ()
 {
 tmpfile=$(mktemp)
@@ -270,11 +198,6 @@ mkdir -p /dev/shm/mjpeg
 chown www-data:www-data /dev/shm/mjpeg
 chmod 777 /dev/shm/mjpeg
 sleep 4;su -c 'raspimjpeg > /dev/null 2>&1 &' www-data
-if [ -e /etc/debian_version ]; then
-  sleep 4;su -c 'php /var/www$rpicamdir/schedule.php > /dev/null 2>&1 &' www-data
-else
-  sleep 4;su -s '/bin/bash' -c 'php /var/www$rpicamdir/schedule.php > /dev/null 2>&1 &' www-data
-fi
 #END RASPIMJPEG SECTION
 
 exit 0
@@ -294,7 +217,6 @@ sudo chmod 755 /etc/rc.local
 #Main install)
 fn_stop
 
-sudo mkdir -p /var/www$rpicamdir/media
 #move old material if changing from a different install folder
 if [ ! "$rpicamdir" == "$rpicamdirold" ]; then
    if [ -e /var/www$rpicamdirold/index.php ]; then
@@ -307,13 +229,8 @@ if [ -e /var/www$rpicamdir/index.html ]; then
    sudo rm /var/www$rpicamdir/index.html
 fi
 
-if [ "$webserver" == "apache" ]; then
-   sudo apt-get install -y apache2 php5 php5-cli libapache2-mod-php5 gpac motion zip libav-tools
-   fn_apache
-else
-   sudo apt-get install -y nginx php5-fpm php5-cli php5-common php-apc apache2-utils gpac motion zip libav-tools
-   fn_nginx
-fi
+sudo apt-get install -y apache2 php5 php5-cli libapache2-mod-php5 gpac motion zip libav-tools
+fn_apache
 
 #Make sure user www-data has bash shell
 sudo sed -i "s/^www-data:x.*/www-data:x:33:33:www-data:\/var\/www:\/bin\/bash/g" /etc/passwd
@@ -327,7 +244,6 @@ if [ ! -e /var/www$rpicamdir/FIFO1 ]; then
    sudo mknod /var/www$rpicamdir/FIFO1 p
 fi
 sudo chmod 666 /var/www$rpicamdir/FIFO1
-sudo chmod 755 /var/www$rpicamdir/raspizip.sh
 
 if [ ! -e /var/www$rpicamdir/cam.jpg ]; then
    sudo ln -sf /run/shm/mjpeg/cam.jpg /var/www$rpicamdir/cam.jpg
@@ -371,19 +287,10 @@ if [ -e /var/www$rpicamdir/uconfig ]; then
    sudo chown www-data:www-data /var/www$rpicamdir/uconfig
 fi
 
-fn_motion
 fn_autostart
 
 if [ -e /var/www$rpicamdir/uconfig ]; then
    sudo chown www-data:www-data /var/www$rpicamdir/uconfig
 fi
-
-if [ -e /var/www$rpicamdir/schedule.php ]; then
-   sudo rm /var/www$rpicamdir/schedule.php
-fi
-
-sudo sed -e "s/www/www$rpicamdirEsc/g" www/schedule.php > www/schedule.php.1
-sudo mv www/schedule.php.1 /var/www$rpicamdir/schedule.php
-sudo chown www-data:www-data /var/www$rpicamdir/schedule.php
 
 fn_reboot
