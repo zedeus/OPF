@@ -2,7 +2,11 @@
 
 ## What is OPF?
 
-OPF is a project built to make automated pet-feeding easy. It's designed with a RaspberryPi (RPi), the official RPi camera module (PiCam), and a servomoter. The web server has been optimized for both PCs and mobile devices using responsive design. It's based on the [RPi_Cam_Web_Interface](http://elinux.org/RPi-Cam-Web-Interface) project, which serves as a great out-of-the-box configuration for setting up an Apache server, that streams the PiCam using RaspiMJPEG.
+OPF is a project built to make automated pet-feeding easy. It's designed with a RaspberryPi (RPi), the official RPi camera module (PiCam), and a servomoter. It features a _quick feed_ button and a time schedule, which is checked every 10 minutes by a cronjob:
+
+`*/10 * * * * python /var/www/html/scripts/checkschedule.py`
+
+The web server has been optimized for both PCs and mobile devices using responsive design. It's based on the [RPi_Cam_Web_Interface](http://elinux.org/RPi-Cam-Web-Interface) project, which serves as a great out-of-the-box configuration for setting up an Apache server, that streams the PiCam using RaspiMJPEG.
 
 ## Screenshots
 
