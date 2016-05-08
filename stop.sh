@@ -43,7 +43,6 @@ fn_stop ()
 { # This is function stop
    sudo killall raspimjpeg
    sudo killall php
-   sudo killall motion
 }
 
 #stop operation
