@@ -126,7 +126,7 @@
    $config = readConfig($config, CONFIG_FILE2);
    $divider = $config['divider'];
    $video_fps = $config['video_fps'];
-   $title = "Pet Feeder";
+   $title = "Open Pet Feeder";
 ?>
 
 <html>
@@ -164,7 +164,7 @@
                <?php 
                   echo '<table class="settingsTable id="scheduleTable">';
                   for ($feed = 1; $feed <= 3; $feed++) {
-                     echo "<th><br>Scheduled Feed $feed </th>";
+                     echo "<th><br>Portion $feed </th>";
                         echo "<tr>";
                            echo "<td>";
                               makeRangedDropDown("Hour", 1, $feed, 12, 1);

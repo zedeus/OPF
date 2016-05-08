@@ -7,7 +7,7 @@ OPF is a project built to make automated pet-feeding easy. It's designed with a 
 ## Screenshots
 
 ### On a 1920x1080 monitor
-![1080p resolution](http://i.imgur.com/6dLXgMg.png)
+![1080p resolution](http://i.imgur.com/yJVT65S.png)
 
-### On an iPhone 6 Plus
-![iPhone 6 Plus](http://i.imgur.com/uFY01WY.png)
+### On a OnePlus One (mobile, 1080x1920)
+![OnePlus One](http://i.imgur.com/5CXr7BK.png)
