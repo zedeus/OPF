@@ -1,1 +1,1 @@
-ready
+/run/shm/mjpeg/status_mjpeg.txt

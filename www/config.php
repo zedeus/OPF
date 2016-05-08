@@ -3,14 +3,14 @@
    define('LBASE_DIR',dirname(__FILE__));
    //Global defines and utility functions
    // version string
-   define('APP_VERSION', 'v6.1.5');
+   define('APP_VERSION', 'v6.1.4');
 
    // name of this application
-   define('APP_NAME', 'RPi Cam Control');
+   define('APP_NAME', 'Pet Feeder');
 
    // the host running the application
    define('HOST_NAME', php_uname('n'));
-   
+
    //define main starting php
    define('ROOT_PHP', 'index.php');
 
@@ -84,21 +84,8 @@
       return $config;
    }
 
-   function saveUserConfig($config) {
-      $cstring= "";
-      foreach($config as $key => $value) {
-         $cstring .= $key . ' ' . $value . "\n";
-      }
-      if ($cstring != "") {
-         $fp = fopen(LBASE_DIR . '/' . CONFIG_FILE2, 'w');
-         fwrite($fp, "#User config file\n");
-         fwrite($fp, $cstring);
-         fclose($fp);
-      }
-   }
-
    // functions to find and delete data files
-   
+
    function getSortedFiles($ascending = true) {
       $scanfiles = scandir(LBASE_DIR . '/' . MEDIA_PATH);
       $files = array();
@@ -106,46 +93,13 @@
          if(($file != '.') && ($file != '..') && isThumbnail($file)) {
             $fDate = filemtime(LBASE_DIR . '/' . MEDIA_PATH . "/$file");
             $files[$file] = $fDate;
-         } 
+         }
       }
       if ($ascending)
          asort($files);
       else
          arsort($files);
       return array_keys($files);
-   }
-   
-   function findLapseFiles($d) {
-      //return an arranged in time order and then must have a matching 4 digit batch and an incrementing lapse number
-      $batch = getFileIndex($d);
-      $padlen = strlen($batch);
-      $fullname = LBASE_DIR . '/' . MEDIA_PATH . '/' . dataFilename($d);
-      $path = dirname($fullname);
-      $start = filemtime("$fullname");
-      $files = array();
-      $scanfiles = scandir($path);
-      $lapsefiles = array();
-      foreach($scanfiles as $file) {
-         if (strpos($file, $batch) !== false) {
-            if (!isThumbnail($file) && strcasecmp(fileext($file), "jpg") == 0) {
-               $fDate = filemtime("$path/$file");
-               if ($fDate >= $start) {
-                  $files[$file] = $fDate;
-               }
-            }
-         }
-      }
-      asort($files);
-      $lapseCount = 1;
-      foreach($files as $key => $value) {
-         if (strpos($key, str_pad($lapseCount, $padlen, 0, STR_PAD_LEFT)) !== false) {
-            $lapsefiles[] = "$path/$key";
-            $lapseCount++;
-         } else {
-            break;   
-         }
-      }
-      return $lapsefiles;
    }
 
    //function to get filesize (native php has 2GB limit)
